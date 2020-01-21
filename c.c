@@ -198,6 +198,7 @@ typedef struct sStatementInfo {
 	boolean     inFunction;     /* are we inside of a function? */
 	boolean		assignment;     /* have we handled an '='? */
 	boolean		notVariable;    /* has a variable declaration been disqualified ? */
+	boolean		isEnd;          /* are we at the end of a function? */
 	impType		implementation; /* abstract or concrete implementation? */
 	unsigned int tokenIndex;    /* currently active token */
 	tokenInfo*	token [(int) NumTokens];
@@ -763,6 +764,7 @@ static void reinitStatement (statementInfo *const st, const boolean partial)
 	st->gotName			= FALSE;
 	st->haveQualifyingName = FALSE;
 	st->tokenIndex		= 0;
+	st->isEnd			= FALSE;
 
 	if (st->parent != NULL)
 		st->inFunction = st->parent->inFunction;
@@ -1156,6 +1158,9 @@ static void makeTag (const tokenInfo *const token,
 
 		findScopeHierarchy (scope, st);
 		addOtherFields (&e, type, st, scope, typeRef);
+
+		if (st->isEnd)
+			e.kindName	= "end-marker";
 
 		makeTagEntry (&e);
 		makeExtraTagEntry (type, &e, scope);
@@ -2784,8 +2789,17 @@ static void createTags (const unsigned int nestLevel,
 		else
 		{
 			tagCheck (st);
-			if (isType (token, TOKEN_BRACE_OPEN))
+			if (isType (token, TOKEN_BRACE_OPEN)) {
 				nest (st, nestLevel + 1);
+				if (Option.xref && st->inFunction == TRUE) {
+					token = activeToken (st);
+					if (isType (token, TOKEN_BRACE_CLOSE)) {
+						st->isEnd = TRUE;
+						st->blockName->lineNumber = token->lineNumber;
+						makeTag (st->blockName, st, st->scope == SCOPE_STATIC, TAG_FUNCTION);
+					}
+				}
+			}
 			checkStatementEnd (st);
 		}
 	}
