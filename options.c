@@ -131,9 +131,9 @@ optionValues Option = {
 	EX_MIX,     /* -n, --excmd */
 #endif
 	FALSE,      /* -R */
-	SO_SORTED,  /* -u, --sort */
+	SO_UNSORTED,  /* -u, --sort */
 	FALSE,      /* -V */
-	FALSE,      /* -x */
+	TRUE,       /* -x */
 	NULL,       /* -L */
 	NULL,       /* -o */
 	NULL,       /* -h */
