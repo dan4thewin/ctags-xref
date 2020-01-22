@@ -1,0 +1,59 @@
+#!/bin/bash
+
+# Show the source code for a function using an xref index
+
+index=index
+if [[ $1 = -f ]]; then
+    index=$2
+    shift 2
+fi
+if [[ ! $1 ]]; then
+    echo "usage: $0 [-f <index-file>] <function-name>..." >&2
+    exit 1
+fi
+if [[ ! -f $index ]]; then
+    echo "File not found: $index" >&2
+    echo -e 'Try running:\n\tctags-xref <source-files> >' $index >&2
+    exit 1
+fi
+
+#example index file contents:
+#
+# LOG_NAME        macro         54  ../clock.c    #define LOG_NAME ( "CLOCK" )
+# timerCallback   function      69  ../clock.c    static void timerCallback( int n )
+# timerCallback   end-marker    84  ../clock.c    static void timerCallback( int n )
+# getTimestring   function      88  ../clock.c    bool getTimestring( char * buffer,
+# getTimestring   end-marker    111 ../clock.c    bool getTimestring( char * buffer,
+# SOCKET_TIMEOUT  macro         76  ../network.c  #define SOCKET_TIMEOUT ( 5000 )
+
+# return records matching the argument and having type function or end-marker
+# normalize to a single space between values
+grep_index() {
+    tr -s ' ' < $index | grep -P '^\Q'"$*"'\E (function|end-marker) '
+}
+
+# lookup a function in the index
+# return filename and line range in pass-by-reference style
+lookup() {
+    local ref1=$1 ref2=$2
+    shift 2
+    set -- $(grep_index "$*" | head -2 | cut -f2,3,4 -d' ')
+    [[ $# = 0 ]] && return 1    # not found
+    if [[ $1 != 'function' || $4 != 'end-marker' ]]; then
+        echo "Bad records in index" >&2
+        exit 1
+    fi
+    local file=$3 start=$2 stop=$5
+    printf -v $ref1 %s $file
+    printf -v $ref2 %s $start,$stop
+    return 0
+}
+
+for tag in "$@"; do
+    if ! lookup srcfile range "$tag"; then
+        echo "$tag not found" >&2
+        continue
+    fi
+    sed -n ${range}p $srcfile
+done
+exit 0
