@@ -35,17 +35,17 @@ grep_index() {
 # lookup a function in the index
 # return filename and line range in pass-by-reference style
 lookup() {
-    local ref1=$1 ref2=$2
+    local -n _file=$1 _range=$2
     shift 2
     set -- $(grep_index "$*" | head -2 | cut -f2,3,4 -d' ')
     [[ $# = 0 ]] && return 1    # not found
     if [[ $1 != 'function' || $4 != 'end-marker' ]]; then
+        # two function records?  two end-markers?
         echo "Bad records in index" >&2
         exit 1
     fi
-    local file=$3 start=$2 stop=$5
-    printf -v $ref1 %s $file
-    printf -v $ref2 %s $start,$stop
+    local _start=$2 _stop=$5
+    _file=$3 _range=$_start,$_stop
     return 0
 }
 
